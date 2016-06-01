@@ -11,7 +11,6 @@ Credit for the original script goes to [Dave Clark](https://github.com/clarkdave
 1. [Requirements](#requirements)
 1. [Getting Started](#getting-started)
 1. [Contributing](#contributing)
-1. [Advanced Configuration Options](#advanced-configuration-options)
 1. [Licensing](#licensing)
 
 ## Requirements
