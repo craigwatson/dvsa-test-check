@@ -1,4 +1,13 @@
 <?php
+/**
+ * DVSA Test Cancellation Check
+ *
+ * @category File
+ * @package  DVSATestCheck
+ * @author   Craig Watson <craig@cwatson.org>
+ * @license  https://www.apache.org/licenses/LICENSE-2.0 Apache License, Version 2.0
+ * @link     https://github.com/craigwatson/dvsa-test-check
+ */
 
 // Script set-up
 date_default_timezone_set('Europe/London');
@@ -11,9 +20,9 @@ require_once "$include_dir/functions.php";
 
 // Error if secrets file not found
 if (!is_file("$include_dir/secrets.php")) {
-  die(logger("Secrets file not found at $include_dir/secrets.php", "ERROR"));
+    die(logger("Secrets file not found at $include_dir/secrets.php", "ERROR"));
 } else {
-  require_once "$include_dir/secrets.php";
+    include_once "$include_dir/secrets.php";
 }
 
 // System Variables
@@ -23,8 +32,8 @@ $sleep         = '2';
 
 // Loop through checks to make
 foreach ($check_data as $name => $data) {
-  logger("========= Running Check for: $name");
-  run_test($data);
+    logger("========= Running Check for: $name");
+    runTest($data);
 }
 
 ?>
