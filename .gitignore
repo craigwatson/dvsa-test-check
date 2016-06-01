@@ -1,0 +1,10 @@
+.DS_Store
+vendor
+Capfile
+config
+deploy
+lib
+log
+Gemfile
+Gemfile.lock
+secrets.php
