@@ -80,6 +80,8 @@ function checkDates($licence_number, $application_id)
     $html        = new simple_html_dom();
     $site_prefix = 'https://driverpracticaltest.direct.gov.uk';
     $cookie_file = "$root_dir/$licence_number" . "_cookies.txt";
+    $date_url    = '';
+    $slot_url    = '';
     $fields      = array('username' => $licence_number, 'password' => $application_id);
 
     // Make initial request to get cookie, then log in
