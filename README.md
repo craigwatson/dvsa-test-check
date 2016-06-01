@@ -1,5 +1,7 @@
 # DVSA Test Cancellation Checker
 
+[![Travis CI Status](https://travis-ci.org/craigwatson/dvsa-test-check.svg?branch=master)](https://travis-ci.org/craigwatson/dvsa-test-check)
+
 This is a small PHP application designed to send notifications when cancellations become available for a driving test scheduled with the UK DVSA.
 
 #### Table of Contents
