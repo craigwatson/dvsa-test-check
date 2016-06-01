@@ -2,7 +2,9 @@
 
 [![Travis CI Status](https://travis-ci.org/craigwatson/dvsa-test-check.svg?branch=master)](https://travis-ci.org/craigwatson/dvsa-test-check)
 
-This is a small PHP application designed to send notifications when cancellations become available for a driving test scheduled with the UK DVSA.
+This is a small PHP application designed to send notifications when cancellations become available for a practical driving test scheduled with the UK DVSA.
+
+Credit for the original script goes to [Dave Clark](https://github.com/clarkdave) for [this script](https://github.com/clarkdave/DSACancellationChecker) written in Python.
 
 #### Table of Contents
 
@@ -18,7 +20,7 @@ To run the application, you will need:
 
   * A server with PHP installed (ideally Linux)
   * The PHP `curl` module - this is used to make requests to the DVSA website
-  * A _booked_ driving test, complete with booking confirmation number
+  * A _booked_ driving test, complete with application reference number (found on your test confirmation email)
 
 ### PHP Support
 
@@ -41,7 +43,11 @@ $check_data = array (
 );
 ```
 
-You can optionally configure the address that the script uses to send email (note that external SMTP servers are currently not configured, all email is sent via PHP's internal `mail` command), and also an HTTP proxy with optional authentication.
+You can optionally configure the address that the script uses to send email, and also an HTTP proxy with optional authentication.
+
+## Limitations
+
+* Note that sending email via external SMTP servers is currently not possible, all email is sent via PHP's internal `mail` command.
 
 ## Scheduled Job via Cron
 
@@ -50,7 +56,7 @@ To check for cancellations regularly, you can use the Linux cron utility. The be
 The below assumes that the application is installed in `/opt/dvsa-test-check`.
 
 ```
-*/15 7-23  *   *   *  /usr/bin/php /opt/dvsa-test-checktest_check.php >> /var/tmp/test_check.log 2>&1
+*/15 7-23  *   *   *  /usr/bin/php /opt/dvsa-test-check/test_check.php >> /var/tmp/test_check.log 2>&1
 ```
 
 ## Contributing
@@ -64,5 +70,6 @@ I accept tips via [ChangeTip](https://www.changetip.com/tipme/craigwatson1987) i
 
 ## Licensing
 
-* Copyright (C) 2016 [Craig Watson](http://www.cwatson.org)
+* Copyright (C) 2016 [Craig Watson](https://cwatson.org)
+* [Original Python script](https://github.com/clarkdave/DSACancellationChecker) (C) [Dave Clark](https://github.com/clarkdave) and Josh Palmer, used under the terms of the MIT License
 * Distributed under the terms of the [Apache License v2.0](http://www.apache.org/licenses/LICENSE-2.0) - see [LICENSE file](https://github.com/craigwatson/dvsa-test-check/blob/master/LICENSE) for details.
