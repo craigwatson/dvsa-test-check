@@ -82,6 +82,7 @@ function checkDates($licence_number, $application_id)
     $cookie_file = "$root_dir/$licence_number" . "_cookies.txt";
     $date_url    = '';
     $slot_url    = '';
+    $return      = array();
     $fields      = array('username' => $licence_number, 'password' => $application_id);
 
     // Make initial request to get cookie, then log in
