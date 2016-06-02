@@ -11,12 +11,12 @@
 
 // Script set-up
 date_default_timezone_set('Europe/London');
-$include_dir = dirname(__FILE__) . "/inc";
-$root_dir   = "/var/tmp";
+$include_dir = dirname(__FILE__);
+$out_dir   = "/var/tmp";
 
 // Include DOM parser + script functions
-require_once "$include_dir/simple_html_dom.php";
-require_once "$include_dir/functions.php";
+require_once "$include_dir/inc/simple_html_dom.php";
+require_once "$include_dir/inc/functions.php";
 
 // Error if secrets file not found
 if (!is_file("$include_dir/secrets.php")) {

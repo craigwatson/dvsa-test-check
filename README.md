@@ -27,7 +27,7 @@ This application has been tested with PHP 5.4, 5.5, 5.6 and 7.0, as well as HHVM
 
 ## Getting Started
 
-To get started, all you need to do is copy/rename `inc/secrets.sample.php` to `inc/secrets.php` and fill in your data. For example:
+To get started, all you need to do is copy/rename `secrets.sample.php` to `secrets.php` and fill in your data. For example:
 
 ```
 $check_data = array (

@@ -19,9 +19,9 @@
 function runTest($data)
 {
 
-    global $root_dir;
+    global $out_dir;
 
-    $json_file = "$root_dir/_" . $data['licence_number'] . "dates.json";
+    $json_file = "$out_dir/dvsa_" . $data['licence_number'] . "_dates.json";
     $available = checkDates($data['licence_number'], $data['application_id']);
     $seen      = readDates($json_file);
     $new       = parseDates($available, $seen, $data['earliest_date'], $data['latest_date'], $data['ideal_day']);
@@ -75,11 +75,11 @@ function readDates($json_file)
 function checkDates($licence_number, $application_id)
 {
 
-    global $root_dir;
+    global $out_dir;
 
     $html        = new simple_html_dom();
     $site_prefix = 'https://driverpracticaltest.direct.gov.uk';
-    $cookie_file = "$root_dir/$licence_number" . "_cookies.txt";
+    $cookie_file = "$out_dir/dvsa_" . $licence_number . "_cookies.txt";
     $date_url    = '';
     $slot_url    = '';
     $return      = array();
