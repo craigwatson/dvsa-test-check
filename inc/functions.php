@@ -82,7 +82,7 @@ function checkDates($licence_number, $application_id)
     $cookie_file = "$out_dir/dvsa_" . $licence_number . "_cookies.txt";
     $date_url    = '';
     $slot_url    = '';
-    $return      = array();
+    $found       = array();
     $fields      = array('username' => $licence_number, 'password' => $application_id);
 
     // Make initial request to get cookie, then log in
@@ -104,12 +104,12 @@ function checkDates($licence_number, $application_id)
     // Get available slots
     foreach ($html->load($slot_picker['html'])->find('span[class=slotDateTime]') as $slot) {
         $tmp = date_create_from_format("l d F Y g:ia", $slot->innertext);
-        $return[] = $tmp->getTimestamp();
+        $found[] = $tmp->getTimestamp();
     }
 
     // Remove cookie jar file
     cookieClean($cookie_file);
-    return $return;
+    return $found;
 }
 
 /**

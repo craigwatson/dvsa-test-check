@@ -12,7 +12,6 @@
 // Script set-up
 date_default_timezone_set('Europe/London');
 $include_dir = dirname(__FILE__);
-$out_dir   = "/var/tmp";
 
 // Include DOM parser + script functions
 require_once "$include_dir/inc/simple_html_dom.php";

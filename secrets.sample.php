@@ -30,4 +30,7 @@ $proxy = array (
 // == Email from address
 $email_from    = "myscript@example.com";
 
+// == Script output directory
+$out_dir   = "/var/tmp";
+
 ?>
