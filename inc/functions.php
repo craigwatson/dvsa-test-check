@@ -217,6 +217,9 @@ function pageRequest($url, $cookie_jar = '', $post = array(), $verbose = false)
     $out['last_url']  = curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
     curl_close($ch);
 
+    // Log return code
+    logger("... Got HTTP " . $out['http_code']);
+
     // Check for captcha
     $dom = new simple_html_dom();
     foreach ($dom->load($out['html'])->find('div[id=recaptcha-check]') as $div) {

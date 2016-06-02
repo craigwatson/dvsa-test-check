@@ -8,3 +8,5 @@ log
 Gemfile
 Gemfile.lock
 secrets.php
+*.txt
+*.json
