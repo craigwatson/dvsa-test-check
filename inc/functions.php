@@ -259,10 +259,14 @@ function sendMail($dates, $email_to)
     global $email_subject;
     global $email_from;
 
-    $mail_text = "";
+    $mail_text  = "This email has been sent from DVSA Practical Test software running on " . gethostname() . ".\n";
+    $mail_text .= "\nThe sofware has found the following dates that match your search:\n";
+
     foreach ($dates as $date) {
         $mail_text .= date("l d F, H:i", $date) . "\n";
     }
+
+    $mail_text .= "\nPlease check the DVSA website as soon as possible to see if this slot is still available.\n";
 
     mail($email_to, $email_subject, $mail_text, "From: $email_from\r\n");
     logger("Email sent to $email_to");
