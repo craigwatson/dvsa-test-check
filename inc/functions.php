@@ -23,17 +23,17 @@ function runTest($data)
 
     $json_file = "$out_dir/dvsa_" . $data['licence_number'] . "_dates.json";
     $available = checkDates($data['licence_number'], $data['application_id']);
-    $seen      = readDates($json_file);
+    $seen      = readData($json_file, true);
     $new       = parseDates($available, $seen, $data['earliest_date'], $data['latest_date'], $data['ideal_day']);
 
     // Take action if new dates have been seen
     if (count($new) > 0) {
         if (is_array($data['email_to'])) {
             foreach ($data['email_to'] as $address) {
-                sendMail($new, $address);
+                sendTestCancellationMail($new, $address);
             }
         } elseif ($data['email_to'] != '') {
-            sendMail($new, $data['email_to']);
+            sendTestCancellationMail($new, $data['email_to']);
         }
 
         saveData($new, $json_file);
@@ -41,27 +41,114 @@ function runTest($data)
 }
 
 /**
- * Reads dates from JSON file and returns an array
+ * Main function to check licence data and parse returned data
  *
- * @param string $json_file Filename to read
+ * @param array $data The data to use for the check
+ *
+ * @return void
+ */
+function runLicenceCheck($data)
+{
+
+    global $out_dir;
+
+    $html           = new simple_html_dom();
+    $login_url      = "https://www.viewdrivingrecord.service.gov.uk/driving-record/licence-number";
+    $cookie_file    = "$out_dir/dvsa_" . $data['licence_number'] . "_licence_cookies.txt";
+    $out_file       = "$out_dir/dvsa_" . $data['licence_number'] . "_licence_status.json";
+    $licence_data   = array();
+    $data_changed   = false;
+    $cookies        = array('naturalSubmit' => 'true');
+    $extract_fields = array('licence-status', 'licence-valid-from', 'licence-valid-to', 'issue-number');
+
+    // Make inital request for cookie
+    $init  = pageRequest("$login_url/", $cookie_file, array(), 10);
+
+    // Error if we don't get a 200 (can happen if we overstep rate-limiting)
+    if ($init['http_code'] !== 200) {
+        logger('Initial page load failed. Exiting.');
+        cookieClean($cookie_file);
+        exit();
+    }
+
+    // Find the hidden "pesel" form field value
+    foreach ($html->load($init['html'])->find('input[id=pesel]') as $input) {
+        $pesel = $input->value;
+    }
+
+    // Set the fields for the form, stripping spaces
+    $login_fields = array (
+      'applicantPassportNumber' => '',
+      'pesel'                   => $pesel,
+      'dln'                     => str_replace(' ', '', $data['licence_number']),
+      'nino'                    => str_replace(' ', '', $data['ni_number']),
+      'postcode'                => str_replace(' ', '', $data['postcode']),
+      'dwpPermission'           => '1'
+    );
+
+    // Run the login request
+    $login = pageRequest($login_url, $cookie_file, $login_fields, 0, $cookies);
+
+    // Get licence data
+    $dom = $html->load($login['html']);
+    foreach ($extract_fields as $field) {
+        foreach ( $dom->find("dd[class=$field-field]") as $dd) {
+            $licence_data[] = $dd->innertext;
+        }
+    }
+
+    // Read old data and parse for differences
+    $old_data = readData($out_file);
+    if (count($old_data) > 0) {
+        $c = 0;
+        foreach ($licence_data as $value) {
+            if ($value != $old_data[$c]) {
+                $data_changed = true;
+            }
+            $c++;
+        }
+    }
+
+    // Send email and store new data if it has changed
+    if ($data_changed === true) {
+        logger("License status has changed.");
+        sendLicenceStatusEmail($old_data, $licence_data, $data['email_to']);
+        saveData($licence_data, $out_file);
+    }
+
+    // Clean cookies
+    cookieClean($cookie_file);
+
+}
+
+/**
+ * Reads data from JSON file and returns an array of key/value pairs
+ *
+ * @param string  $json_file   Filename to read
+ * @param boolean $format_date Whether to format the log output
  *
  * @return array
  */
-function readDates($json_file)
+function readData($json_file, $format_date = false)
 {
 
     if (is_file($json_file)) {
         // Read JSON file for previous data
-        $dates = json_decode(file_get_contents($json_file), true);
-        logger("Imported " . count($dates) . " dates:");
-        foreach ($dates as $date) {
-            logger("... " . date("l d F H:i", $date));
+        $data = json_decode(file_get_contents($json_file), true);
+        logger("Imported " . count($data) . " values:");
+        foreach ($data as $item) {
+            if ($format_date) {
+                $output = date("l d F H:i", $item);
+            } else {
+                $output = $item;
+            }
+            logger("... " . $output);
         }
     } else {
         // Use new array
-        $dates = array();
+        $data = array();
     }
-    return $dates;
+    return $data;
 }
 
 /**
@@ -93,13 +180,13 @@ function checkDates($licence_number, $application_id)
     foreach ($html->load($login['html'])->find('a[id=date-time-change]') as $link) {
         $date_url = htmlspecialchars_decode($link->href);
     }
-    $date_change = pageRequest($site_prefix . $date_url, $cookie_file, $fields, false);
+    $date_change = pageRequest($site_prefix . $date_url, $cookie_file, $fields);
 
     // Get and load slot picker URL
     foreach ($html->load($date_change['html'])->find('form') as $form) {
         $slot_url = htmlspecialchars_decode($form->action);
     }
-    $slot_picker = pageRequest($site_prefix . $slot_url, $cookie_file, array('testChoice' => 'ASAP'), false);
+    $slot_picker = pageRequest($site_prefix . $slot_url, $cookie_file, array('testChoice' => 'ASAP'));
 
     // Get available slots
     foreach ($html->load($slot_picker['html'])->find('span[class=slotDateTime]') as $slot) {
@@ -156,16 +243,17 @@ function parseDates($available, $seen, $earliest_date, $latest_date, $ideal_day)
  * @param string  $url        URL to request
  * @param string  $cookie_jar File to use for cookies
  * @param array   $post       Array of values to use for HTTP POST request
+ * @param integer $sleep      The number of seconds to sleep/pause *after* the request
+ * @param string  $cookies    Array of cookies to set in-line
  * @param boolean $verbose    Latest date to treat as 'new'
  *
  * @return array
  */
-function pageRequest($url, $cookie_jar = '', $post = array(), $verbose = false)
+function pageRequest($url, $cookie_jar = '',  $post = array(), $sleep = 2, $cookies = array(), $verbose = false)
 {
 
     global $proxy;
     global $user_agent;
-    global $sleep;
 
     // Setup request
     logger("Requesting $url");
@@ -184,11 +272,11 @@ function pageRequest($url, $cookie_jar = '', $post = array(), $verbose = false)
     curl_setopt($ch, CURLOPT_USERAGENT, $user_agent);
     curl_setopt($ch, CURLOPT_HEADER, 1);
     curl_setopt($ch, CURLOPT_NOBODY, false);
+
     if ($verbose) {
         curl_setopt($ch, CURLOPT_VERBOSE, 1);
     }
 
-    // Set Proxy
     if ($proxy['host'] != '') {
         logger("... Using proxy: http://" . $proxy['host']);
         curl_setopt($ch, CURLOPT_PROXY, $proxy['host']);
@@ -198,12 +286,21 @@ function pageRequest($url, $cookie_jar = '', $post = array(), $verbose = false)
         }
     }
 
+    if (count($cookies) > 0) {
+        $cookie_string = '';
+        foreach ($cookies as $key => $val) {
+            logger("... Setting cookie: $key=$val");
+            $cookie_string .= " $key=\"$val\";";
+        }
+        curl_setopt($ch, CURLOPT_COOKIE, $cookie_string);
+    }
+
     // Submit POST fields
     if (count($post) > 0) {
         curl_setopt($ch, CURLOPT_POST, true);
         foreach ($post as $key => $value) {
-            logger("... Sending $key: $value");
-            $fields .= $key.'='.$value.'&';
+            logger("... Sending $key: '".urlEncode($value)."'");
+            $fields .= $key.'='.urlEncode($value).'&';
         }
         $fields = rtrim($fields, '&');
         curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
@@ -238,22 +335,24 @@ function pageRequest($url, $cookie_jar = '', $post = array(), $verbose = false)
     }
 
     // Sleep
-    logger("... Sleeping for $sleep seconds");
-    sleep($sleep);
+    if ($sleep > 0) {
+        logger("... Sleeping for $sleep seconds");
+        sleep($sleep);
+    }
 
     // Return
     return $out;
 }
 
 /**
- * Sends email
+ * Sends email for test cancellations
  *
  * @param array  $dates    Available dates
  * @param string $email_to Email address
  *
  * @return void
  */
-function sendMail($dates, $email_to)
+function sendTestCancellationMail($dates, $email_to)
 {
 
     global $email_subject;
@@ -273,17 +372,48 @@ function sendMail($dates, $email_to)
 }
 
 /**
- * Saves data to file
+ * Sends email for licence status changes
  *
- * @param array  $dates Available dates
- * @param string $file  File name to write to
+ * @param array  $old_data Previous licence data
+ * @param array  $new_data New licence data
+ * @param string $email_to Email address
  *
  * @return void
  */
-function saveData($dates, $file)
+function sendLicenceStatusEmail($old_data, $new_data, $email_to)
 {
-    file_put_contents($file, json_encode($dates));
-    logger("Dates saved to $file");
+    global $email_subject;
+    global $email_from;
+
+    $mail_text  = "This email has been sent from DVLA Licence software running on " . gethostname() . ".\n";
+    $mail_text .= "\nThe sofware has found that your licence data has changed:\n\n";
+    $c = 0;
+
+    foreach ($new_data as $value) {
+        $mail_text .= "$value";
+        if (array_key_exists($c, $old_data)) {
+            $mail_text .= " (was: '" . $old_data[$c] . "')";
+        }
+        $mail_text .= "\n";
+        $c++;
+    }
+
+    mail($email_to, $email_subject, $mail_text, "From: $email_from\r\n");
+    logger("Email sent to $email_to");
+
+}
+/**
+ * Saves data to file
+ *
+ * @param array  $data Data to save
+ * @param string $file File name to write to
+ *
+ * @return void
+ */
+function saveData($data, $file)
+{
+    file_put_contents($file, json_encode($data));
+    logger("Data saved to $file");
 }
 
 /**
@@ -300,7 +430,7 @@ function logger($message, $level = "INFO")
 }
 
 /**
- * Diff two arrays of dates, return new ones
+ * Removed a file, but only if it exists
  *
  * @param string $file Filename to remove
  *
@@ -309,6 +439,7 @@ function logger($message, $level = "INFO")
 function cookieClean($file)
 {
     if (is_file($file)) {
+        logger("Clearing cookies from $file");
         unlink($file);
     }
 }

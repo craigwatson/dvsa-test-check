@@ -33,4 +33,14 @@ $email_from    = "myscript@example.com";
 // == Script output directory
 $out_dir   = "/var/tmp";
 
+// == License Check Personal data
+$licence_data = array (
+  'person' => array(
+    'licence_number' => '',
+    'ni_number'      => '',
+    'postcode'       => '',
+    'email_to'       => '',
+  )
+);
+
 ?>

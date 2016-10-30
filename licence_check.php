@@ -1,6 +1,6 @@
 <?php
 /**
- * DVSA Test Cancellation Check
+ * DVLA Licence Status Check
  *
  * @category File
  * @package  DVSATestCheck
@@ -25,13 +25,13 @@ if (!is_file("$include_dir/secrets.php")) {
 }
 
 // System Variables
-$email_subject = "Driving Test Cancellations";
+$email_subject = "Driving Licence Status Check";
 $user_agent    = 'Mozilla/5.0';
 
 // Loop through checks to make
-foreach ($check_data as $name => $data) {
-    logger("========= Running Check for: $name");
-    runTest($data);
+foreach ($licence_data as $name => $data) {
+     logger("========= Running Check for: $name");
+     runLicenceCheck($data);
 }
 
 ?>
