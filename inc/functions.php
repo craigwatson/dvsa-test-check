@@ -94,6 +94,7 @@ function runLicenceCheck($data)
     foreach ($extract_fields as $field) {
         foreach ( $dom->find("dd[class=$field-field]") as $dd) {
             $licence_data[] = $dd->innertext;
+            logger("$field: " . $dd->innertext);
         }
     }
 
