@@ -90,11 +90,12 @@ function runLicenceCheck($data)
     $login = pageRequest($login_url, $cookie_file, $login_fields, 0, $cookies);
 
     // Get licence data
+    logger("Retrieving licence data");
     $dom = $html->load($login['html']);
     foreach ($extract_fields as $field) {
         foreach ( $dom->find("dd[class=$field-field]") as $dd) {
             $licence_data[] = $dd->innertext;
-            logger("$field: " . $dd->innertext);
+            logger("... $field: " . $dd->innertext);
         }
     }
 
@@ -108,6 +109,8 @@ function runLicenceCheck($data)
             }
             $c++;
         }
+    } else {
+      $data_changed = true;
     }
 
     // Send email and store new data if it has changed
@@ -115,6 +118,8 @@ function runLicenceCheck($data)
         logger("License status has changed.");
         sendLicenceStatusEmail($old_data, $licence_data, $data['email_to']);
         saveData($licence_data, $out_file);
+    } else {
+        logger("No action to take.");
     }
 
     // Clean cookies
@@ -135,8 +140,8 @@ function readData($json_file, $format_date = false)
 
     if (is_file($json_file)) {
         // Read JSON file for previous data
+        logger("Reading data from $json_file");
         $data = json_decode(file_get_contents($json_file), true);
-        logger("Imported " . count($data) . " values:");
         foreach ($data as $item) {
             if ($format_date) {
                 $output = date("l d F H:i", $item);
