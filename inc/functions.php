@@ -110,7 +110,7 @@ function runLicenceCheck($data)
             $c++;
         }
     } else {
-      $data_changed = true;
+        $data_changed = true;
     }
 
     // Send email and store new data if it has changed
