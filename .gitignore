@@ -10,3 +10,4 @@ Gemfile.lock
 secrets.php
 *.txt
 *.json
+!composer.json
