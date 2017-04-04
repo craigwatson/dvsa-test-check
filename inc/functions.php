@@ -23,6 +23,13 @@ function runTest($data)
 
     $json_file = "$out_dir/dvsa_" . $data['licence_number'] . "_dates.json";
     $available = checkDates($data['licence_number'], $data['application_id']);
+
+    // Error if no dates found
+    if (count($available) == 0) {
+        logger("No dates found", "ERROR");
+        die();
+    }
+
     $seen      = readData($json_file, true);
     $new       = parseDates($available, $seen, $data['earliest_date'], $data['latest_date'], $data['ideal_day']);
 
@@ -175,12 +182,21 @@ function checkDates($licence_number, $application_id)
     $cookie_file = "$out_dir/dvsa_" . $licence_number . "_cookies.txt";
     $date_url    = '';
     $slot_url    = '';
+    $login_error = '';
     $found       = array();
     $fields      = array('username' => $licence_number, 'password' => $application_id);
 
     // Make initial request to get cookie, then log in
     $init  = pageRequest("$site_prefix/login", $cookie_file);
     $login = pageRequest("$site_prefix/login", $cookie_file, $fields);
+
+    // Parse login error and return an empty array
+    foreach ($html->load($login['html'])->find('section[role=alert]') as $error) {
+        foreach ($error->find('li') as $error_text) {
+            logger("... Error found when logging in: " . html_entity_decode($error_text->innertext), "ERROR");
+        }
+        return array();
+    }
 
     // Get and load date change URL
     foreach ($html->load($login['html'])->find('a[id=date-time-change]') as $link) {
