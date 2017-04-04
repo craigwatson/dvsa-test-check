@@ -63,7 +63,7 @@ The below assumes that the application is installed in `/opt/dvsa-test-check`.
 Contributions and testing reports are extremely welcome. Please submit a pull request or issue on [GitHub](https://github.com/craigwatson/dvsa-test-check), and make sure
 that your code conforms to the PEAR PHP coding standards (Travis CI will test your pull request when it's sent).
 
-I accept tips via Bitcoin to 1N73BsKN2bubvRo9dXbUjwe4SBHW4j4j4B - if you would like to buy me a beer, please do!
+I accept tips via Bitcoin to 1BympojWkXErUpEVE6HXm3vWNj9W6wVP2Z - if you would like to buy me a beer, please do!
 
 ## Licensing
 
