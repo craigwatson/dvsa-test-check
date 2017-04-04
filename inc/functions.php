@@ -27,11 +27,12 @@ function runTest($data)
     // Error if no dates found
     if (count($available) == 0) {
         logger("No dates found", "ERROR");
-        die();
+        cookieClean($cookie_file);
+        exit();
     }
 
-    $seen      = readData($json_file, true);
-    $new       = parseDates($available, $seen, $data['earliest_date'], $data['latest_date'], $data['ideal_day']);
+    $seen = readData($json_file, true);
+    $new  = parseDates($available, $seen, $data['earliest_date'], $data['latest_date'], $data['ideal_day']);
 
     // Take action if new dates have been seen
     if (count($new) > 0) {
@@ -183,6 +184,7 @@ function checkDates($licence_number, $application_id)
     $date_url    = '';
     $slot_url    = '';
     $login_error = '';
+    $csrf_query  = array();
     $found       = array();
     $fields      = array('username' => $licence_number, 'password' => $application_id);
 
@@ -198,22 +200,33 @@ function checkDates($licence_number, $application_id)
         return array();
     }
 
-    // Get and load date change URL
+    // Get date change URL + CSRF token for future use
     foreach ($html->load($login['html'])->find('a[id=date-time-change]') as $link) {
         $date_url = htmlspecialchars_decode($link->href);
+        parse_str(html_entity_decode($date_url), $csrf_query);
     }
+
+    // Get available date fields
     $date_change = pageRequest($site_prefix . $date_url, $cookie_file, $fields);
 
     // Get and load slot picker URL
     foreach ($html->load($date_change['html'])->find('form') as $form) {
         $slot_url = htmlspecialchars_decode($form->action);
     }
-    $slot_picker = pageRequest($site_prefix . $slot_url, $cookie_file, array('testChoice' => 'ASAP'));
+
+    // Build array of fields to send
+    $slot_picker_fields = array(
+      'csrftoken'            => $csrf_query['csrftoken'],
+      'testChoice'           => 'ASAP',
+      'preferredTestDate'    => '01/01/2016',
+      'drivingLicenceSubmit' => 'Continue',
+    );
+
+    $slot_picker = pageRequest($site_prefix . $slot_url, $cookie_file, $slot_picker_fields, 2, array(), false);
 
     // Get available slots
-    foreach ($html->load($slot_picker['html'])->find('span[class=slotDateTime]') as $slot) {
-        $tmp = date_create_from_format("l d F Y g:ia", $slot->innertext);
-        $found[] = $tmp->getTimestamp();
+    foreach ($html->load($slot_picker['html'])->find('input[class=SlotPicker-slot]') as $slot) {
+        $found[] = ($slot->value/1000);
     }
 
     // Remove cookie jar file
@@ -237,7 +250,7 @@ function parseDates($available, $seen, $earliest_date, $latest_date, $ideal_day)
 
     $new = array();
 
-    logger("Parsing " . count($available) . " dates");
+    logger("Parsing " . count($available) . " available dates and " . count($seen) . " new dates");
     foreach ($available as $date) {
         if ($date > strtotime($latest_date)) {
             $class = "LATE";
@@ -246,7 +259,7 @@ function parseDates($available, $seen, $earliest_date, $latest_date, $ideal_day)
         } elseif (strcmp(date("l", $date), $ideal_day) == 0) {
             $class = "IDEAL";
             $new[] = $date;
-        } elseif (array_search($date, $dates['seen']) !== false) {
+        } elseif (array_search($date, $seen) !== false) {
             $class = "SEEN";
         } else {
             $class = "NEW";
