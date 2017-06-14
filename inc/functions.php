@@ -171,6 +171,7 @@ function readData($json_file, $format_date = false)
  *
  * @param string $licence_number Licnce Number for student
  * @param string $application_id ID of the application to find
+ * @param string $cookie_file    Path to file used for cookies
  *
  * @return array
  */
@@ -200,8 +201,8 @@ function checkDates($licence_number, $application_id, $cookie_file)
         return array();
     }
 
-    foreach($html->load($login['html'])->find('div[class=onscreen-help]') as $help) {
-        if(strpos($help,"The number of allowed changes to your booking has now been exceeded") !== FALSE) {
+    foreach ($html->load($login['html'])->find('div[class=onscreen-help]') as $help) {
+        if (strpos($help, "The number of allowed changes to your booking has now been exceeded") !== false) {
             logger("The number of allowed changes to your booking has now been exceeded - please contact the DVSA to continue.", "ERROR");
             return array();
         }

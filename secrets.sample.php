@@ -14,9 +14,9 @@ $check_data = array (
   'person' => array (
     'licence_number' => '',
     'application_id' => '',
-    'latest_date'    => '', # Must be YYYY-MM-DD
-    'earliest_date'  => '', # Must be YYYY-MM-DD
-    'ideal_day'      => '', # Must be one of MON, TUE, WED, THU, FRI, SAT or SUN
+    'latest_date'    => '', // Must be YYYY-MM-DD
+    'earliest_date'  => '', // Must be YYYY-MM-DD
+    'ideal_day'      => '', // Must be one of MON, TUE, WED, THU, FRI, SAT or SUN
     'email_to'       => '',
   )
 );
