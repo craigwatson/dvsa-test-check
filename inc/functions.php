@@ -21,8 +21,9 @@ function runTest($data)
 
     global $out_dir;
 
-    $json_file = "$out_dir/dvsa_" . $data['licence_number'] . "_dates.json";
-    $available = checkDates($data['licence_number'], $data['application_id']);
+    $json_file   = "$out_dir/dvsa_" . $data['licence_number'] . "_dates.json";
+    $cookie_file = "$out_dir/dvsa_" . $data['licence_number'] . "_cookies.txt";
+    $available   = checkDates($data['licence_number'], $data['application_id'], $cookie_file);
 
     // Error if no dates found
     if (count($available) == 0) {
@@ -173,14 +174,13 @@ function readData($json_file, $format_date = false)
  *
  * @return array
  */
-function checkDates($licence_number, $application_id)
+function checkDates($licence_number, $application_id, $cookie_file)
 {
 
     global $out_dir;
 
     $html        = new simple_html_dom();
     $site_prefix = 'https://driverpracticaltest.direct.gov.uk';
-    $cookie_file = "$out_dir/dvsa_" . $licence_number . "_cookies.txt";
     $date_url    = '';
     $slot_url    = '';
     $login_error = '';
@@ -198,6 +198,13 @@ function checkDates($licence_number, $application_id)
             logger("... Error found when logging in: " . html_entity_decode($error_text->innertext), "ERROR");
         }
         return array();
+    }
+
+    foreach($html->load($login['html'])->find('div[class=onscreen-help]') as $help) {
+        if(strpos($help,"The number of allowed changes to your booking has now been exceeded") !== FALSE) {
+            logger("The number of allowed changes to your booking has now been exceeded - please contact the DVSA to continue.", "ERROR");
+            return array();
+        }
     }
 
     // Get date change URL + CSRF token for future use
