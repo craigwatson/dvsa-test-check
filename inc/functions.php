@@ -14,7 +14,7 @@
   *
   * @param array $data Personal data to use
   *
-  * @return void
+  * @return boolean
   */
 function runTest($data)
 {
@@ -27,9 +27,9 @@ function runTest($data)
 
     // Error if no dates found
     if (count($available) == 0) {
-        logger("No dates found", "ERROR");
+        logger('No dates found', 'WARN');
         cookieClean($cookie_file);
-        exit();
+        return false;
     }
 
     $seen = readData($json_file, true);
@@ -47,6 +47,8 @@ function runTest($data)
 
         saveData($new, $json_file);
     }
+
+    return true;
 }
 
 /**
@@ -54,7 +56,7 @@ function runTest($data)
  *
  * @param array $data The data to use for the check
  *
- * @return void
+ * @return boolean
  */
 function runLicenceCheck($data)
 {
@@ -75,9 +77,9 @@ function runLicenceCheck($data)
 
     // Error if we don't get a 200 (can happen if we overstep rate-limiting)
     if ($init['http_code'] !== 200) {
-        logger('Initial page load failed. Exiting.');
+        logger('Initial page load failed.','ERROR');
         cookieClean($cookie_file);
-        exit();
+        return false;
     }
 
     // Find the hidden "pesel" form field value
@@ -99,7 +101,7 @@ function runLicenceCheck($data)
     $login = pageRequest($login_url, $cookie_file, $login_fields, 0, $cookies);
 
     // Get licence data
-    logger("Retrieving licence data");
+    logger('Retrieving licence data');
     $dom = $html->load($login['html']);
     foreach ($extract_fields as $field) {
         foreach ( $dom->find("dd[class=$field-field]") as $dd) {
@@ -124,15 +126,16 @@ function runLicenceCheck($data)
 
     // Send email and store new data if it has changed
     if ($data_changed === true) {
-        logger("License status has changed.");
+        logger('License status has changed.');
         sendLicenceStatusEmail($old_data, $licence_data, $data['email_to']);
         saveData($licence_data, $out_file);
     } else {
-        logger("No action to take.");
+        logger('No action to take.');
     }
 
     // Clean cookies
     cookieClean($cookie_file);
+    return true;
 
 }
 
@@ -153,11 +156,11 @@ function readData($json_file, $format_date = false)
         $data = json_decode(file_get_contents($json_file), true);
         foreach ($data as $item) {
             if ($format_date) {
-                $output = date("l d F H:i", $item);
+                $output = date('l d F H:i', $item);
             } else {
                 $output = $item;
             }
-            logger("... " . $output);
+            logger("... $output");
         }
     } else {
         // Use new array
@@ -196,14 +199,14 @@ function checkDates($licence_number, $application_id, $cookie_file)
     // Parse login error and return an empty array
     foreach ($html->load($login['html'])->find('section[role=alert]') as $error) {
         foreach ($error->find('li') as $error_text) {
-            logger("... Error found when logging in: " . html_entity_decode($error_text->innertext), "ERROR");
+            logger('... Error found when logging in: ' . html_entity_decode($error_text->innertext), 'ERROR');
         }
         return array();
     }
 
     foreach ($html->load($login['html'])->find('div[class=onscreen-help]') as $help) {
-        if (strpos($help, "The number of allowed changes to your booking has now been exceeded") !== false) {
-            logger("The number of allowed changes to your booking has now been exceeded - please contact the DVSA to continue.", "ERROR");
+        if (strpos($help, 'The number of allowed changes to your booking has now been exceeded') !== false) {
+            logger('The number of allowed changes to your booking has now been exceeded - please contact the DVSA to continue.', 'ERROR');
             return array();
         }
     }
@@ -258,23 +261,23 @@ function parseDates($available, $seen, $earliest_date, $latest_date, $ideal_day)
 
     $new = array();
 
-    logger("Parsing " . count($available) . " available dates and " . count($seen) . " new dates");
+    logger('Parsing ' . count($available) . ' available dates and ' . count($seen) . ' new dates');
     foreach ($available as $date) {
         if ($date > strtotime($latest_date)) {
-            $class = "LATE";
+            $class = 'LATE';
         } elseif ($date < strtotime($earliest_date)) {
-            $class = "EARLY";
+            $class = 'EARLY';
         } elseif (strcmp(date("l", $date), $ideal_day) == 0) {
-            $class = "IDEAL";
+            $class = 'IDEAL';
             $new[] = $date;
         } elseif (array_search($date, $seen) !== false) {
-            $class = "SEEN";
+            $class = 'SEEN';
         } else {
-            $class = "NEW";
+            $class = 'NEW';
             $new[] = $date;
         }
 
-        logger("... [$class] " . date("l d F H:i", $date));
+        logger("... [$class] " . date('l d F H:i', $date));
     }
 
     return $new;
@@ -302,7 +305,6 @@ function pageRequest($url, $cookie_jar = '',  $post = array(), $sleep = 2, $cook
     logger("Requesting $url");
     $ch     = curl_init();
     $fields = '';
-    $return = array();
     $capcha = false;
 
     // Set curl options
@@ -321,10 +323,10 @@ function pageRequest($url, $cookie_jar = '',  $post = array(), $sleep = 2, $cook
     }
 
     if ($proxy['host'] != '') {
-        logger("... Using proxy: http://" . $proxy['host']);
+        logger('... Using proxy: http://' . $proxy['host']);
         curl_setopt($ch, CURLOPT_PROXY, $proxy['host']);
         if ($proxy['auth'] != '') {
-            logger("... Using proxy auth");
+            logger('... Using proxy auth');
             curl_setopt($ch, CURLOPT_PROXYUSERPWD, $proxy['auth']);
         }
     }
@@ -358,19 +360,7 @@ function pageRequest($url, $cookie_jar = '',  $post = array(), $sleep = 2, $cook
     curl_close($ch);
 
     // Log return code
-    logger("... Got HTTP " . $out['http_code']);
-
-    // Check for captcha
-    $dom = new simple_html_dom();
-    foreach ($dom->load($out['html'])->find('div[id=recaptcha-check]') as $div) {
-        $capcha = true;
-    }
-
-    if ($capcha) {
-        cookieClean($cookie_jar);
-        logger("... ERROR: Capcha present.");
-        exit();
-    }
+    logger('... Got HTTP ' . $out['http_code']);
 
     // Verbose print
     if ($verbose) {
@@ -381,6 +371,17 @@ function pageRequest($url, $cookie_jar = '',  $post = array(), $sleep = 2, $cook
     if ($sleep > 0) {
         logger("... Sleeping for $sleep seconds");
         sleep($sleep);
+    }
+
+    // Check for captcha
+    $dom = new simple_html_dom();
+    foreach ($dom->load($out['html'])->find('div[id=recaptcha-check]') as $div) {
+        $capcha = true;
+    }
+
+    if ($capcha) {
+        cookieClean($cookie_jar);
+        logger('... Capcha present. Removing cookies.','ERROR');
     }
 
     // Return
@@ -401,11 +402,11 @@ function sendTestCancellationMail($dates, $email_to)
     global $email_subject;
     global $email_from;
 
-    $mail_text  = "This email has been sent from DVSA Practical Test software running on " . gethostname() . ".\n";
+    $mail_text  = 'This email has been sent from DVSA Practical Test software running on ' . gethostname() . ".\n";
     $mail_text .= "\nThe sofware has found the following dates that match your search:\n";
 
     foreach ($dates as $date) {
-        $mail_text .= date("l d F, H:i", $date) . "\n";
+        $mail_text .= date('l d F, H:i', $date) . "\n";
     }
 
     $mail_text .= "\nPlease check the DVSA website as soon as possible to see if this slot is still available.\n";
@@ -428,7 +429,7 @@ function sendLicenceStatusEmail($old_data, $new_data, $email_to)
     global $email_subject;
     global $email_from;
 
-    $mail_text  = "This email has been sent from DVLA Licence software running on " . gethostname() . ".\n";
+    $mail_text  = 'This email has been sent from DVLA Licence software running on ' . gethostname() . ".\n";
     $mail_text .= "\nThe sofware has found that your licence data has changed:\n\n";
     $c = 0;
 
@@ -467,9 +468,9 @@ function saveData($data, $file)
  *
  * @return void
  */
-function logger($message, $level = "INFO")
+function logger($message, $level = 'INFO')
 {
-    echo date("Y-m-d H:i:s") . " -- $level : $message\n";
+    echo date('Y-m-d H:i:s') . " -- $level : $message\n";
 }
 
 /**
