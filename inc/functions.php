@@ -77,7 +77,7 @@ function runLicenceCheck($data)
 
     // Error if we don't get a 200 (can happen if we overstep rate-limiting)
     if ($init['http_code'] !== 200) {
-        logger('Initial page load failed.','ERROR');
+        logger('Initial page load failed.', 'ERROR');
         cookieClean($cookie_file);
         return false;
     }
@@ -381,7 +381,7 @@ function pageRequest($url, $cookie_jar = '',  $post = array(), $sleep = 2, $cook
 
     if ($capcha) {
         cookieClean($cookie_jar);
-        logger('... Capcha present. Removing cookies.','ERROR');
+        logger('... Capcha present. Removing cookies.', 'ERROR');
     }
 
     // Return
