@@ -229,7 +229,7 @@ function checkDates($licence_number, $application_id, $cookie_file)
     $slot_picker_fields = array(
       'csrftoken'            => $csrf_query['csrftoken'],
       'testChoice'           => 'ASAP',
-      'preferredTestDate'    => '01/01/2016',
+      'preferredTestDate'    => date('d/m/Y'),
       'drivingLicenceSubmit' => 'Continue',
     );
 
