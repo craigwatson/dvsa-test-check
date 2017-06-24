@@ -12,11 +12,12 @@
  /**
   * Main function to run the check and parse returned data
   *
-  * @param array $data Personal data to use
+  * @param array  $data Personal data to use
+  * @param string $name Name of person being checked
   *
   * @return boolean
   */
-function runTest($data)
+function runTest($data, $name)
 {
 
     global $out_dir;
@@ -39,10 +40,10 @@ function runTest($data)
     if (count($new) > 0) {
         if (is_array($data['email_to'])) {
             foreach ($data['email_to'] as $address) {
-                sendTestCancellationMail($new, $address);
+                sendTestCancellationMail($new, $address, $name);
             }
         } elseif ($data['email_to'] != '') {
-            sendTestCancellationMail($new, $data['email_to']);
+            sendTestCancellationMail($new, $data['email_to'], $name);
         }
 
         saveData($new, $json_file);
@@ -393,17 +394,18 @@ function pageRequest($url, $cookie_jar = '',  $post = array(), $sleep = 2, $cook
  *
  * @param array  $dates    Available dates
  * @param string $email_to Email address
+ * @param string $name     Person's name to include
  *
  * @return void
  */
-function sendTestCancellationMail($dates, $email_to)
+function sendTestCancellationMail($dates, $email_to, $name)
 {
 
     global $email_subject;
     global $email_from;
 
     $mail_text  = 'This email has been sent from DVSA Practical Test software running on ' . gethostname() . ".\n";
-    $mail_text .= "\nThe sofware has found the following dates that match your search:\n";
+    $mail_text .= "\nThe software has found the following dates for $name that match your search:\n";
 
     foreach ($dates as $date) {
         $mail_text .= date('l d F, H:i', $date) . "\n";

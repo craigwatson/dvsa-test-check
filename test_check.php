@@ -31,7 +31,7 @@ $user_agent    = 'Mozilla/5.0';
 // Loop through checks to make
 foreach ($check_data as $name => $data) {
     logger("========= Running Check for: $name");
-    runTest($data);
+    runTest($data, $name);
 }
 
 ?>
