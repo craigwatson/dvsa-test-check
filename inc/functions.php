@@ -185,7 +185,7 @@ function checkDates($licence_number, $application_id, $cookie_file)
     global $out_dir;
 
     $html        = new simple_html_dom();
-    $site_prefix = 'https://driverpracticaltest.direct.gov.uk';
+    $site_prefix = 'https://driverpracticaltest.dvsa.gov.uk';
     $date_url    = '';
     $slot_url    = '';
     $login_error = '';
